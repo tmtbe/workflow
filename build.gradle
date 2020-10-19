@@ -1,0 +1,67 @@
+plugins {
+    id "org.jetbrains.kotlin.jvm" version "1.3.72"
+    id "application"
+}
+
+version "0.1"
+group "com.thoughtworks"
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+configurations {
+    // for dependencies that are needed for development only
+    developmentOnly
+}
+
+dependencies {
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
+    implementation ("org.jetbrains.kotlin:kotlin-script-runtime:1.3.72")
+    implementation ("org.jetbrains.kotlin:kotlin-compiler:1.3.72")
+    implementation ("org.jetbrains.kotlin:kotlin-script-util:1.3.72")
+}
+
+test.classpath += configurations.developmentOnly
+
+mainClassName = "com.thoughtworks.Application"
+
+// use JUnit 5 platform
+test {
+    useJUnitPlatform()
+}
+
+java {
+    sourceCompatibility = JavaVersion.toVersion('11')
+}
+
+compileKotlin {
+    kotlinOptions {
+        jvmTarget = '11'
+        //Will retain parameter names for Java reflection
+        javaParameters = true
+    }
+}
+compileTestKotlin {
+    kotlinOptions {
+        jvmTarget = '11'
+        javaParameters = true
+    }
+}
+
+tasks.withType(JavaExec) {
+    classpath += configurations.developmentOnly
+    jvmArgs('-XX:TieredStopAtLevel=1', '-Dcom.sun.management.jmxremote')
+    if (gradle.startParameter.continuous) {
+        systemProperties(
+            'micronaut.io.watch.restart':'true',
+            'micronaut.io.watch.enabled':'true',
+            "micronaut.io.watch.paths":"src/main"
+        )
+    }
+}
+
+
+

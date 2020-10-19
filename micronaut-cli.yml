@@ -1,0 +1,6 @@
+applicationType: cli
+defaultPackage: com.thoughtworks
+testFramework: kotlintest
+sourceLanguage: kotlin
+buildTool: gradle
+features: [annotation-api, app-name, docker, file-watch, gradle, kotlin, kotlintest, logback, picocli, picocli-kotlin-application, picocli-kotlintest, readme, shade, yaml]
