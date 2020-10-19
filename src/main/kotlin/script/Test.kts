@@ -1,89 +1,87 @@
 import com.thoughtworks.flow.*
 
-val api = Api("api")
-val service = Service("service")
-val provisionClient = Client("provisionClient")
-val msrClient = Client("msrClient")
-val omsClient = Client("omsClient")
-val commodityRepo = Repository("commodityRepo")
+val api = Api("Bff")
+val service = Service("Service")
+val awsClient = Client("AwsClient")
 
-val apiGet = api.m("Get")
-val redeem = service.m("redeem")
+val apiVerify = api.m("POST 验证&绑卡")
+val verify = service.m("verify")
 
-val isAvailableForUser = provisionClient.m("isAvailableForUser")
-        .result("在圈人范围")
-        .desc("true")
-        .result("不在圈人范围")
-        .desc("false")
-val findById = commodityRepo.m("findById")
-        .result("object")
-        .desc("""
-                {
-                    "id":1
-                }
-        """.trimIndent())
-        .given("""
-                commodityRepo::save一个数据
-                ```json
-                {
-                    "id":1
-                }
-                ```
-        """.trimIndent())
-        .result("null")
-        .given("commodityRepo 没有数据")
-val getUserDetail = msrClient.m("getUserDetail")
-        .result("获取到用户信息")
-        .exception("FeignException")
-val getStock = omsClient.m("getStock")
-        .result("库存不足")
+val awsVerify = awsClient.m("verify")
+        .result("成功，不需要展示条款")
         .desc("""
             {
-                "stock":0
+                "code":0,
+                "msg":"success",
+                "body":{
+                    "needShow": false 
+                }
             }
         """.trimIndent())
-        .result("库存充足")
+        .result("成功，需要展示条款")
         .desc("""
             {
-                "stock":100
+                "code":0,
+                "msg":"success",
+                "body":{
+                    "needShow": true 
+                }
             }
         """.trimIndent())
-        .exception("FeignException")
-val createOrderPay = omsClient.m("createOrderPay")
-        .result("创建订单成功")
-        .exception("FeignException")
-
-val story = Story("这是一个故事")
-story.run({
-    apiGet {
-        try {
-            verifyHead("token")
-            redeem {
-                when (isAvailableForUser.caseName()) {
-                    "不在圈人范围" -> e("NotAvailableForUserException")
+        .result("失败")
+        .desc("""
+            {
+                "code":1002,
+                "msg":"fail",
+                "body":{
+                    "needShow": false 
                 }
-                when (findById.caseName()) {
-                    "null" -> e("NotFindByIdException")
-                }
-                getUserDetail.case()
-                when (getStock.caseName()) {
-                    "库存不足" -> e("StockNotAdequateException")
-                }
-                createOrderPay.case()
             }
-            RESULT("200", """
-                            {
-                                "code":200,
-                                "message":""
+        """.trimIndent())
+        .exception("超时等500错误")
+
+val awsCreate = awsClient.m("create")
+        .result("成功")
+        .desc("""
+            {
+                "code":0,
+                "msg":"success"
+            }
+        """.trimIndent())
+        .result("失败")
+        .desc("""
+            {
+                "code":2001,
+                "msg":"fail"
+            }
+        """.trimIndent())
+        .exception("超时等500错误")
+
+val story = Story("用户在绑定特殊卡/包时，可以收到提示并勾选额外条款。")
+story.run(
+        {
+            apiVerify {
+                try {
+                    verifyHead("token")
+                    verify {
+                        when (awsVerify.caseName()) {
+                            "成功，不需要展示条款" -> {
+                                when (awsCreate.caseName()) {
+                                    "成功" -> RESULT("Success")
+                                    "失败" -> e("FailWithCode")
+                                }
                             }
-                        """.trimIndent())
-        } catch (e: Throwable) {
-            RESULT("400", """
-                            {
-                                "code":400,
-                                "message":""
-                            }
-                        """.trimIndent())
+                            "失败" -> e("FailWithCode")
+                        }
+                        RESULT("Success")
+                    }
+                    RESULT("200")
+                } catch (e: Throwable) {
+                    when (e.message) {
+                        "FailWithCode" -> RESULT("500 FailWithCode")
+                        else -> RESULT("500")
+                    }
+                }
+            }
         }
-    }
-})
+)

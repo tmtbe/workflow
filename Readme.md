@@ -1,594 +1,409 @@
-# Story 这是一个故事
-## AC1: `when` api::verificationHeader(token) -> VerifyHeaderFail `then` api::Get -> 400
-### api Test
+**`这是一个可以生成如下AC文档的工具`**
+
+# Story 用户在绑定特殊卡/包时，可以收到提示并勾选额外条款。
+
+## Bff::POST 验证&绑卡
+
+### AC1: `when` Bff::verificationHeader(token) -> VerifyHeaderFail `then` Bff::POST 验证&绑卡 -> 500
+
+```sequence
+Actor->Bff:POST 验证&绑卡
+Bff->Bff:verificationHeader(token)
+Bff-->Bff:VerifyHeaderFail
+Bff-->Actor:500
+```
+
+### api Test 
+
 [given] 
-* api::verificationHeader(token) -> VerifyHeaderFail
+
+* Bff::verificationHeader(token) -> VerifyHeaderFail
 
 
 [stub] 
 
 [then] 
-api::Get -> 400
+Bff::POST 验证&绑卡 -> 500
+
+### AC2: `when` AwsClient::verify -> 超时等500错误 `then` Bff::POST 验证&绑卡 -> 500
+
+```sequence
+Actor->Bff:POST 验证&绑卡
+Bff->Bff:verificationHeader(token)
+Bff-->Bff:通过验证
+Bff->Service:verify
+Service->AwsClient:verify
+AwsClient-->Service:超时等500错误
+Service-->Bff:超时等500错误
+Bff-->Actor:500
+```
+
+### api Test 
+
+[given] 
+
+* Bff::verificationHeader(token) -> 通过验证
+
+
+[stub] 
+
+* Service::verify -> 超时等500错误
+
+[then] 
+Bff::POST 验证&绑卡 -> 500
+
+### service Test 
+
+[given] 
+
+
+[stub] 
+
+* AwsClient::verify -> 超时等500错误
+
+[then] 
+Service::verify -> 超时等500错误
+
+### infra Test 
+
+[given] 
+
+
+[stub] 
+
+[then] 
+AwsClient::verify -> 超时等500错误
+
+### AC3: `when` AwsClient::verify -> 失败 `then` Bff::POST 验证&绑卡 -> 500 FailWithCode
+
+```sequence
+Actor->Bff:POST 验证&绑卡
+Bff->Bff:verificationHeader(token)
+Bff-->Bff:通过验证
+Bff->Service:verify
+Service->AwsClient:verify
+AwsClient-->Service:失败
+Service-->Bff:FailWithCode
+Bff-->Actor:500 FailWithCode
+```
+
+### api Test 
+
+[given] 
+
+* Bff::verificationHeader(token) -> 通过验证
+
+
+[stub] 
+
+* Service::verify -> FailWithCode
+
+[then] 
+Bff::POST 验证&绑卡 -> 500 FailWithCode
+
+### service Test 
+
+[given] 
+
+
+[stub] 
+
+* AwsClient::verify -> 失败
+
 ```json
 {
-    "code":400,
-    "message":""
-}
-```
-
-## AC2: `when` provisionClient::isAvailableForUser -> 不在圈人范围 `then` api::Get -> 400
-### api Test
-[given] 
-* api::verificationHeader(token) -> 通过验证
-
-
-[stub] 
-* service::redeem -> NotAvailableForUserException
-
-[then] 
-api::Get -> 400
-```json
-{
-    "code":400,
-    "message":""
-}
-```
-
-### service Test
-[given] 
-
-
-[stub] 
-* provisionClient::isAvailableForUser -> 不在圈人范围
-```json
-false
-```
-
-[then] 
-service::redeem -> NotAvailableForUserException
-
-### infra Test
-[given] 
-
-
-[stub] 
-
-[then] 
-provisionClient::isAvailableForUser -> 不在圈人范围
-```json
-false
-```
-
-## AC3: `when` commodityRepo::findById -> null `then` api::Get -> 400
-### api Test
-[given] 
-* api::verificationHeader(token) -> 通过验证
-
-
-[stub] 
-* service::redeem -> NotFindByIdException
-
-[then] 
-api::Get -> 400
-```json
-{
-    "code":400,
-    "message":""
-}
-```
-
-### service Test
-[given] 
-
-
-[stub] 
-* provisionClient::isAvailableForUser -> 在圈人范围
-```json
-true
-```
-* commodityRepo::findById -> null
-
-[then] 
-service::redeem -> NotFindByIdException
-
-### infra Test
-[given] 
-
-
-[stub] 
-
-[then] 
-provisionClient::isAvailableForUser -> 在圈人范围
-```json
-true
-```
-
-### infra Test
-[given] 
-commodityRepo 没有数据
-
-[stub] 
-
-[then] 
-commodityRepo::findById -> null
-
-## AC4: `when` msrClient::getUserDetail -> FeignException `then` api::Get -> 400
-### api Test
-[given] 
-* api::verificationHeader(token) -> 通过验证
-
-
-[stub] 
-* service::redeem -> FeignException
-
-[then] 
-api::Get -> 400
-```json
-{
-    "code":400,
-    "message":""
-}
-```
-
-### service Test
-[given] 
-
-
-[stub] 
-* provisionClient::isAvailableForUser -> 在圈人范围
-```json
-true
-```
-* commodityRepo::findById -> object
-```json
-{
-    "id":1
-}
-```
-* msrClient::getUserDetail -> FeignException
-
-[then] 
-service::redeem -> FeignException
-
-### infra Test
-[given] 
-
-
-[stub] 
-
-[then] 
-provisionClient::isAvailableForUser -> 在圈人范围
-```json
-true
-```
-
-### infra Test
-[given] 
-commodityRepo::save一个数据
-```json
-{
-    "id":1
-}
-```
-
-[stub] 
-
-[then] 
-commodityRepo::findById -> object
-```json
-{
-    "id":1
-}
-```
-
-### infra Test
-[given] 
-
-
-[stub] 
-
-[then] 
-msrClient::getUserDetail -> FeignException
-
-## AC5: `when` omsClient::getStock -> FeignException `then` api::Get -> 400
-### api Test
-[given] 
-* api::verificationHeader(token) -> 通过验证
-
-
-[stub] 
-* service::redeem -> FeignException
-
-[then] 
-api::Get -> 400
-```json
-{
-    "code":400,
-    "message":""
-}
-```
-
-### service Test
-[given] 
-
-
-[stub] 
-* provisionClient::isAvailableForUser -> 在圈人范围
-```json
-true
-```
-* commodityRepo::findById -> object
-```json
-{
-    "id":1
-}
-```
-* msrClient::getUserDetail -> 获取到用户信息
-* omsClient::getStock -> FeignException
-
-[then] 
-service::redeem -> FeignException
-
-### infra Test
-[given] 
-
-
-[stub] 
-
-[then] 
-provisionClient::isAvailableForUser -> 在圈人范围
-```json
-true
-```
-
-### infra Test
-[given] 
-commodityRepo::save一个数据
-```json
-{
-    "id":1
-}
-```
-
-[stub] 
-
-[then] 
-commodityRepo::findById -> object
-```json
-{
-    "id":1
-}
-```
-
-### infra Test
-[given] 
-
-
-[stub] 
-
-[then] 
-msrClient::getUserDetail -> 获取到用户信息
-
-### infra Test
-[given] 
-
-
-[stub] 
-
-[then] 
-omsClient::getStock -> FeignException
-
-## AC6: `when` omsClient::createOrderPay -> FeignException `then` api::Get -> 400
-### api Test
-[given] 
-* api::verificationHeader(token) -> 通过验证
-
-
-[stub] 
-* service::redeem -> FeignException
-
-[then] 
-api::Get -> 400
-```json
-{
-    "code":400,
-    "message":""
-}
-```
-
-### service Test
-[given] 
-
-
-[stub] 
-* provisionClient::isAvailableForUser -> 在圈人范围
-```json
-true
-```
-* commodityRepo::findById -> object
-```json
-{
-    "id":1
-}
-```
-* msrClient::getUserDetail -> 获取到用户信息
-* omsClient::getStock -> 库存充足
-```json
-{
-    "stock":100
-}
-```
-* omsClient::createOrderPay -> FeignException
-
-[then] 
-service::redeem -> FeignException
-
-### infra Test
-[given] 
-
-
-[stub] 
-
-[then] 
-provisionClient::isAvailableForUser -> 在圈人范围
-```json
-true
-```
-
-### infra Test
-[given] 
-commodityRepo::save一个数据
-```json
-{
-    "id":1
-}
-```
-
-[stub] 
-
-[then] 
-commodityRepo::findById -> object
-```json
-{
-    "id":1
-}
-```
-
-### infra Test
-[given] 
-
-
-[stub] 
-
-[then] 
-msrClient::getUserDetail -> 获取到用户信息
-
-### infra Test
-[given] 
-
-
-[stub] 
-
-[then] 
-omsClient::getStock -> 库存充足
-```json
-{
-    "stock":100
-}
-```
-
-### infra Test
-[given] 
-
-
-[stub] 
-
-[then] 
-omsClient::createOrderPay -> FeignException
-
-## AC7: `when` omsClient::createOrderPay -> 创建订单成功 `then` api::Get -> 200
-### api Test
-[given] 
-* api::verificationHeader(token) -> 通过验证
-
-
-[stub] 
-* service::redeem -> 创建订单成功
-
-[then] 
-api::Get -> 200
-```json
-{
-    "code":200,
-    "message":""
-}
-```
-
-### service Test
-[given] 
-
-
-[stub] 
-* provisionClient::isAvailableForUser -> 在圈人范围
-```json
-true
-```
-* commodityRepo::findById -> object
-```json
-{
-    "id":1
-}
-```
-* msrClient::getUserDetail -> 获取到用户信息
-* omsClient::getStock -> 库存充足
-```json
-{
-    "stock":100
-}
-```
-* omsClient::createOrderPay -> 创建订单成功
-
-[then] 
-service::redeem -> 创建订单成功
-
-### infra Test
-[given] 
-
-
-[stub] 
-
-[then] 
-provisionClient::isAvailableForUser -> 在圈人范围
-```json
-true
-```
-
-### infra Test
-[given] 
-commodityRepo::save一个数据
-```json
-{
-    "id":1
-}
-```
-
-[stub] 
-
-[then] 
-commodityRepo::findById -> object
-```json
-{
-    "id":1
-}
-```
-
-### infra Test
-[given] 
-
-
-[stub] 
-
-[then] 
-msrClient::getUserDetail -> 获取到用户信息
-
-### infra Test
-[given] 
-
-
-[stub] 
-
-[then] 
-omsClient::getStock -> 库存充足
-```json
-{
-    "stock":100
-}
-```
-
-### infra Test
-[given] 
-
-
-[stub] 
-
-[then] 
-omsClient::createOrderPay -> 创建订单成功
-
-## AC8: `when` omsClient::getStock -> 库存不足 `then` api::Get -> 400
-### api Test
-[given] 
-* api::verificationHeader(token) -> 通过验证
-
-
-[stub] 
-* service::redeem -> StockNotAdequateException
-
-[then] 
-api::Get -> 400
-```json
-{
-    "code":400,
-    "message":""
-}
-```
-
-### service Test
-[given] 
-
-
-[stub] 
-* provisionClient::isAvailableForUser -> 在圈人范围
-```json
-true
-```
-* commodityRepo::findById -> object
-```json
-{
-    "id":1
-}
-```
-* msrClient::getUserDetail -> 获取到用户信息
-* omsClient::getStock -> 库存不足
-```json
-{
-    "stock":0
+    "code":1002,
+    "msg":"fail",
+    "body":{
+        "needShow": false 
+    }
 }
 ```
 
 [then] 
-service::redeem -> StockNotAdequateException
+Service::verify -> FailWithCode
 
-### infra Test
+### infra Test 
+
 [given] 
 
 
 [stub] 
 
 [then] 
-provisionClient::isAvailableForUser -> 在圈人范围
-```json
-true
-```
+AwsClient::verify -> 失败
 
-### infra Test
-[given] 
-commodityRepo::save一个数据
 ```json
 {
-    "id":1
+    "code":1002,
+    "msg":"fail",
+    "body":{
+        "needShow": false 
+    }
 }
 ```
 
+### AC4: `when` AwsClient::verify -> 成功，需要展示条款 `then` Bff::POST 验证&绑卡 -> 200
+
+```sequence
+Actor->Bff:POST 验证&绑卡
+Bff->Bff:verificationHeader(token)
+Bff-->Bff:通过验证
+Bff->Service:verify
+Service->AwsClient:verify
+AwsClient-->Service:成功，需要展示条款
+Service-->Bff:Success
+Bff-->Actor:200
+```
+
+### api Test 
+
+[given] 
+
+* Bff::verificationHeader(token) -> 通过验证
+
+
 [stub] 
 
+* Service::verify -> Success
+
 [then] 
-commodityRepo::findById -> object
+Bff::POST 验证&绑卡 -> 200
+
+### service Test 
+
+[given] 
+
+
+[stub] 
+
+* AwsClient::verify -> 成功，需要展示条款
+
 ```json
 {
-    "id":1
+    "code":0,
+    "msg":"success",
+    "body":{
+        "needShow": true 
+    }
 }
 ```
 
-### infra Test
+[then] 
+Service::verify -> Success
+
+### infra Test 
+
 [given] 
 
 
 [stub] 
 
 [then] 
-msrClient::getUserDetail -> 获取到用户信息
+AwsClient::verify -> 成功，需要展示条款
 
-### infra Test
-[given] 
-
-
-[stub] 
-
-[then] 
-omsClient::getStock -> 库存不足
 ```json
 {
-    "stock":0
+    "code":0,
+    "msg":"success",
+    "body":{
+        "needShow": true 
+    }
+}
+```
+
+### AC5: `when` AwsClient::create -> 超时等500错误 `then` Bff::POST 验证&绑卡 -> 500
+
+```sequence
+Actor->Bff:POST 验证&绑卡
+Bff->Bff:verificationHeader(token)
+Bff-->Bff:通过验证
+Bff->Service:verify
+Service->AwsClient:verify
+AwsClient-->Service:成功，不需要展示条款
+Service->AwsClient:create
+AwsClient-->Service:超时等500错误
+Service-->Bff:超时等500错误
+Bff-->Actor:500
+```
+
+### service Test 
+
+[given] 
+
+
+[stub] 
+
+* AwsClient::verify -> 成功，不需要展示条款
+
+```json
+{
+    "code":0,
+    "msg":"success",
+    "body":{
+        "needShow": false 
+    }
+}
+```
+
+* AwsClient::create -> 超时等500错误
+
+[then] 
+Service::verify -> 超时等500错误
+
+### infra Test 
+
+[given] 
+
+
+[stub] 
+
+[then] 
+AwsClient::verify -> 成功，不需要展示条款
+
+```json
+{
+    "code":0,
+    "msg":"success",
+    "body":{
+        "needShow": false 
+    }
+}
+```
+
+### infra Test 
+
+[given] 
+
+
+[stub] 
+
+[then] 
+AwsClient::create -> 超时等500错误
+
+### AC6: `when` AwsClient::create -> 失败 `then` Bff::POST 验证&绑卡 -> 500 FailWithCode
+
+```sequence
+Actor->Bff:POST 验证&绑卡
+Bff->Bff:verificationHeader(token)
+Bff-->Bff:通过验证
+Bff->Service:verify
+Service->AwsClient:verify
+AwsClient-->Service:成功，不需要展示条款
+Service->AwsClient:create
+AwsClient-->Service:失败
+Service-->Bff:FailWithCode
+Bff-->Actor:500 FailWithCode
+```
+
+### service Test 
+
+[given] 
+
+
+[stub] 
+
+* AwsClient::verify -> 成功，不需要展示条款
+
+```json
+{
+    "code":0,
+    "msg":"success",
+    "body":{
+        "needShow": false 
+    }
+}
+```
+
+* AwsClient::create -> 失败
+
+```json
+{
+    "code":2001,
+    "msg":"fail"
+}
+```
+
+[then] 
+Service::verify -> FailWithCode
+
+### infra Test 
+
+[given] 
+
+
+[stub] 
+
+[then] 
+AwsClient::create -> 失败
+
+```json
+{
+    "code":2001,
+    "msg":"fail"
+}
+```
+
+### AC7: `when` AwsClient::create -> 成功 `then` Bff::POST 验证&绑卡 -> 200
+
+```sequence
+Actor->Bff:POST 验证&绑卡
+Bff->Bff:verificationHeader(token)
+Bff-->Bff:通过验证
+Bff->Service:verify
+Service->AwsClient:verify
+AwsClient-->Service:成功，不需要展示条款
+Service->AwsClient:create
+AwsClient-->Service:成功
+Service-->Bff:Success
+Bff-->Actor:200
+```
+
+### service Test 
+
+[given] 
+
+
+[stub] 
+
+* AwsClient::verify -> 成功，不需要展示条款
+
+```json
+{
+    "code":0,
+    "msg":"success",
+    "body":{
+        "needShow": false 
+    }
+}
+```
+
+* AwsClient::create -> 成功
+
+```json
+{
+    "code":0,
+    "msg":"success"
+}
+```
+
+[then] 
+Service::verify -> Success
+
+### infra Test 
+
+[given] 
+
+
+[stub] 
+
+[then] 
+AwsClient::create -> 成功
+
+```json
+{
+    "code":0,
+    "msg":"success"
 }
 ```
 
